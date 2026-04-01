@@ -102,8 +102,9 @@ Write-Information "`n[Phase 1] Checking prerequisites..."
 
 # ── Required modules ─────────────────────────────────────────────────────────
 $requiredModules = @(
-    @{ Name = 'ExchangeOnlineManagement'; MinVersion = '3.0.0' },
-    @{ Name = 'Microsoft.Graph.Users';    MinVersion = '2.0.0' },
+    @{ Name = 'ExchangeOnlineManagement';                    MinVersion = '3.0.0' },
+    @{ Name = 'Microsoft.Graph.Authentication';              MinVersion = '2.0.0' },
+    @{ Name = 'Microsoft.Graph.Users';                       MinVersion = '2.0.0' },
     @{ Name = 'Microsoft.Graph.Identity.DirectoryManagement'; MinVersion = '2.0.0' }
 )
 
@@ -160,6 +161,10 @@ Connect-IPPSSession -ShowBanner:$false
 # ── Connection 3 of 3: Microsoft Graph ───────────────────────────────────────
 # Needed for Get-MgSubscribedSku (Copilot SKU discovery) and Get-MgUser
 # (license assignment lookups). Uses a different token audience than Exchange.
+# Explicitly import Graph modules - PowerShell 5.1 auto-loading can fail.
+Import-Module Microsoft.Graph.Authentication -ErrorAction Stop
+Import-Module Microsoft.Graph.Users -ErrorAction Stop
+Import-Module Microsoft.Graph.Identity.DirectoryManagement -ErrorAction Stop
 Write-Information "`nConnecting to Microsoft Graph (interactive - sign-in 3 of 3)..."
 # GCC Moderate uses the Global cloud (graph.microsoft.com).
 # For GCC High, add: -Environment USGov
