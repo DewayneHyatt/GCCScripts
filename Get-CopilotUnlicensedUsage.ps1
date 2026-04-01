@@ -5,11 +5,29 @@
 
 .DESCRIPTION
     Designed for GCC Moderate tenants where modern usage reports are unavailable.
-    Connects interactively to Exchange Online, Security & Compliance, and Microsoft
-    Graph, queries the UAL for CopilotInteraction events, resolves Copilot SKU
-    assignments, and exports a user-level CSV of impacted users (without a premium
-    M365 Copilot license) with per-app last active dates and interaction counts —
-    similar to the commercial M365 Apps usage report.
+    Queries the Unified Audit Log for CopilotInteraction events, resolves Copilot
+    SKU assignments via Microsoft Graph, and exports a user-level CSV of impacted
+    users (without a premium M365 Copilot license) with per-app last active dates
+    and interaction counts — similar to the commercial M365 Apps usage report.
+
+    The script establishes three separate interactive connections because each
+    M365 service requires its own authentication token:
+
+      1. Exchange Online (Connect-ExchangeOnline)
+         Provides Get-AdminAuditLogConfig to verify that Unified Audit Log
+         ingestion is enabled before attempting any searches.
+
+      2. Security & Compliance (Connect-IPPSSession)
+         Provides Search-UnifiedAuditLog, which lives in the Compliance
+         PowerShell session — not the standard Exchange session.
+
+      3. Microsoft Graph (Connect-MgGraph)
+         Provides Get-MgSubscribedSku and Get-MgUser to discover Copilot
+         license SKUs and build the set of licensed users for cross-reference.
+
+    All three sign-in prompts occur back-to-back at the start of the script so
+    the remaining work runs unattended. If the user's browser already has an
+    active admin session with a satisfied MFA claim, some prompts may auto-complete.
 
 .PARAMETER StartDate
     Beginning of the search window. Defaults to 90 days ago.
@@ -109,8 +127,9 @@ foreach ($mod in $requiredModules) {
     }
 }
 
-# ── Connect to Exchange Online ───────────────────────────────────────────────
-Write-Information "`nConnecting to Exchange Online (interactive)..."
+# ── Connection 1 of 3: Exchange Online ───────────────────────────────────────
+# Needed for Get-AdminAuditLogConfig (UAL ingestion check).
+Write-Information "`nConnecting to Exchange Online (interactive — sign-in 1 of 3)..."
 # GCC Moderate uses commercial endpoints by default.
 # For GCC High, uncomment the next line and comment out the one after it:
 #   Connect-ExchangeOnline -ExchangeEnvironmentName O365USGovGCCHigh -ShowBanner:$false
@@ -129,15 +148,19 @@ Then wait up to 24 hours for events to start flowing.
 }
 Write-Information "  Unified Audit Log ingestion is enabled — OK"
 
-# ── Connect to Security & Compliance (for Search-UnifiedAuditLog) ────────────
-Write-Information "`nConnecting to Security & Compliance PowerShell (interactive)..."
+# ── Connection 2 of 3: Security & Compliance ────────────────────────────────
+# Needed for Search-UnifiedAuditLog, which is a Compliance cmdlet — not
+# available through the standard Exchange Online session.
+Write-Information "`nConnecting to Security & Compliance PowerShell (interactive — sign-in 2 of 3)..."
 # GCC Moderate uses the default endpoint.
 # For GCC High, uncomment the next line and comment out the one after it:
 #   Connect-IPPSSession -ConnectionUri https://ps.compliance.protection.office365.us/powershell-liveid/
 Connect-IPPSSession -ShowBanner:$false
 
-# ── Connect to Microsoft Graph ───────────────────────────────────────────────
-Write-Information "`nConnecting to Microsoft Graph (interactive)..."
+# ── Connection 3 of 3: Microsoft Graph ───────────────────────────────────────
+# Needed for Get-MgSubscribedSku (Copilot SKU discovery) and Get-MgUser
+# (license assignment lookups). Uses a different token audience than Exchange.
+Write-Information "`nConnecting to Microsoft Graph (interactive — sign-in 3 of 3)..."
 # GCC Moderate uses the Global cloud (graph.microsoft.com).
 # For GCC High, add: -Environment USGov
 Connect-MgGraph -Scopes 'User.Read.All', 'Directory.Read.All' -NoWelcome
