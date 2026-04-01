@@ -8,7 +8,7 @@
     Queries the Unified Audit Log for CopilotInteraction events, resolves Copilot
     SKU assignments via Microsoft Graph, and exports a user-level CSV of impacted
     users (without a premium M365 Copilot license) with per-app last active dates
-    and interaction counts — similar to the commercial M365 Apps usage report.
+    and interaction counts - similar to the commercial M365 Apps usage report.
 
     The script establishes three separate interactive connections because each
     M365 service requires its own authentication token:
@@ -19,7 +19,7 @@
 
       2. Security & Compliance (Connect-IPPSSession)
          Provides Search-UnifiedAuditLog, which lives in the Compliance
-         PowerShell session — not the standard Exchange session.
+         PowerShell session - not the standard Exchange session.
 
       3. Microsoft Graph (Connect-MgGraph)
          Provides Get-MgSubscribedSku and Get-MgUser to discover Copilot
@@ -95,7 +95,7 @@ function Resolve-AppName {
 }
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  PHASE 1 — Prerequisites & Connections
+#  PHASE 1 - Prerequisites & Connections
 # ═══════════════════════════════════════════════════════════════════════════════
 
 Write-Information "`n[Phase 1] Checking prerequisites..."
@@ -123,13 +123,13 @@ foreach ($mod in $requiredModules) {
             throw "Required module '$($mod.Name)' is missing. Exiting."
         }
     } else {
-        Write-Information "  $($mod.Name) v$($installed.Version) — OK"
+        Write-Information "  $($mod.Name) v$($installed.Version) - OK"
     }
 }
 
 # ── Connection 1 of 3: Exchange Online ───────────────────────────────────────
 # Needed for Get-AdminAuditLogConfig (UAL ingestion check).
-Write-Information "`nConnecting to Exchange Online (interactive — sign-in 1 of 3)..."
+Write-Information "`nConnecting to Exchange Online (interactive - sign-in 1 of 3)..."
 # GCC Moderate uses commercial endpoints by default.
 # For GCC High, uncomment the next line and comment out the one after it:
 #   Connect-ExchangeOnline -ExchangeEnvironmentName O365USGovGCCHigh -ShowBanner:$false
@@ -146,12 +146,12 @@ Enable it in the Compliance portal > Audit, or run:
 Then wait up to 24 hours for events to start flowing.
 "@
 }
-Write-Information "  Unified Audit Log ingestion is enabled — OK"
+Write-Information "  Unified Audit Log ingestion is enabled - OK"
 
 # ── Connection 2 of 3: Security & Compliance ────────────────────────────────
-# Needed for Search-UnifiedAuditLog, which is a Compliance cmdlet — not
+# Needed for Search-UnifiedAuditLog, which is a Compliance cmdlet - not
 # available through the standard Exchange Online session.
-Write-Information "`nConnecting to Security & Compliance PowerShell (interactive — sign-in 2 of 3)..."
+Write-Information "`nConnecting to Security & Compliance PowerShell (interactive - sign-in 2 of 3)..."
 # GCC Moderate uses the default endpoint.
 # For GCC High, uncomment the next line and comment out the one after it:
 #   Connect-IPPSSession -ConnectionUri https://ps.compliance.protection.office365.us/powershell-liveid/
@@ -160,13 +160,13 @@ Connect-IPPSSession -ShowBanner:$false
 # ── Connection 3 of 3: Microsoft Graph ───────────────────────────────────────
 # Needed for Get-MgSubscribedSku (Copilot SKU discovery) and Get-MgUser
 # (license assignment lookups). Uses a different token audience than Exchange.
-Write-Information "`nConnecting to Microsoft Graph (interactive — sign-in 3 of 3)..."
+Write-Information "`nConnecting to Microsoft Graph (interactive - sign-in 3 of 3)..."
 # GCC Moderate uses the Global cloud (graph.microsoft.com).
 # For GCC High, add: -Environment USGov
 Connect-MgGraph -Scopes 'User.Read.All', 'Directory.Read.All' -NoWelcome
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  PHASE 2 — Discover Copilot SKUs & Build Licensed-User Set
+#  PHASE 2 - Discover Copilot SKUs & Build Licensed-User Set
 # ═══════════════════════════════════════════════════════════════════════════════
 
 Write-Information "`n[Phase 2] Discovering Copilot SKUs..."
@@ -183,7 +183,7 @@ No subscribed SKU with 'Copilot' in the SkuPartNumber was found.
 This could mean:
   - No M365 Copilot licenses are assigned in this tenant.
   - The SKU has a different name in GCC (check Get-MgSubscribedSku output).
-Proceeding anyway — all users will be flagged as unlicensed.
+Proceeding anyway - all users will be flagged as unlicensed.
 "@
     $copilotSkuIds = @()
 } else {
@@ -222,11 +222,11 @@ Write-Information "  Total users in tenant: $($graphUsers.Count)"
 Write-Information "  Users with a Copilot license: $($licensedUsers.Count)"
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  PHASE 3 — Search the Unified Audit Log for CopilotInteraction Events
+#  PHASE 3 - Search the Unified Audit Log for CopilotInteraction Events
 # ═══════════════════════════════════════════════════════════════════════════════
 
 Write-Information "`n[Phase 3] Searching Unified Audit Log for CopilotInteraction events..."
-Write-Information "  Window: $($StartDate.ToString('yyyy-MM-dd HH:mm')) → $($EndDate.ToString('yyyy-MM-dd HH:mm'))"
+Write-Information "  Window: $($StartDate.ToString('yyyy-MM-dd HH:mm')) to $($EndDate.ToString('yyyy-MM-dd HH:mm'))"
 
 $allRecords = [System.Collections.Generic.List[object]]::new()
 
@@ -236,7 +236,7 @@ while ($chunkStart -lt $EndDate) {
     $chunkEnd = $chunkStart.AddDays($ChunkDays)
     if ($chunkEnd -gt $EndDate) { $chunkEnd = $EndDate }
 
-    Write-Information "  Chunk: $($chunkStart.ToString('yyyy-MM-dd')) → $($chunkEnd.ToString('yyyy-MM-dd'))..."
+    Write-Information "  Chunk: $($chunkStart.ToString('yyyy-MM-dd')) to $($chunkEnd.ToString('yyyy-MM-dd'))..."
 
     $sessionId = [guid]::NewGuid().ToString()
     $chunkRecordCount = 0
@@ -274,7 +274,7 @@ while ($chunkStart -lt $EndDate) {
                 Write-Warning "Failed after $maxRetries retries on chunk $($chunkStart.ToString('yyyy-MM-dd')): $_"
                 break
             }
-            Write-Warning "  Throttled or transient error — retrying in 30s (attempt $retryCount/$maxRetries)..."
+            Write-Warning "  Throttled or transient error - retrying in 30s (attempt $retryCount/$maxRetries)..."
             Start-Sleep -Seconds 30
         }
     } while ($true)
@@ -293,7 +293,7 @@ Possible reasons:
   1. No users have used M365 Copilot in Word, Excel, PowerPoint, or OneNote during this period.
   2. CopilotInteraction audit events may not yet be available in GCC Moderate.
   3. Audit log retention may not cover your date range (standard = 90 days; Audit Premium = 1 year).
-  4. The 'CopilotInteraction' operation name may have changed — check available operations with:
+  4. The 'CopilotInteraction' operation name may have changed - check available operations with:
        Search-UnifiedAuditLog -StartDate (Get-Date).AddDays(-1) -EndDate (Get-Date) -RecordType CopilotInteraction -ResultSize 1
 "@
     Disconnect-ExchangeOnline -Confirm:$false -ErrorAction SilentlyContinue
@@ -302,7 +302,7 @@ Possible reasons:
 }
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  PHASE 4 — Parse, Cross-Reference, Consolidate, and Export
+#  PHASE 4 - Parse, Cross-Reference, Consolidate, and Export
 # ═══════════════════════════════════════════════════════════════════════════════
 
 Write-Information "`n[Phase 4] Parsing audit records and building user-level summary..."
@@ -331,7 +331,7 @@ foreach ($record in $allRecords) {
     $upn = $audit.UserId
     if (-not $upn) { $upn = $record.UserIds }
 
-    # Skip licensed users — we only care about unlicensed
+    # Skip licensed users - we only care about unlicensed
     if ($licensedUsers.Contains($upn)) { continue }
 
     # Parse event timestamp
@@ -420,9 +420,9 @@ $usersWithPpt   = @($summaryRows | Where-Object { $_.PowerPoint_LastActive })
 $usersWithOn    = @($summaryRows | Where-Object { $_.OneNote_LastActive })
 
 Write-Information "`n═══════════════════════════════════════════════════"
-Write-Information "  SUMMARY — Impacted Unlicensed Copilot Users"
+Write-Information "  SUMMARY - Impacted Unlicensed Copilot Users"
 Write-Information "═══════════════════════════════════════════════════"
-Write-Information "  Date range      : $($StartDate.ToString('yyyy-MM-dd')) → $($EndDate.ToString('yyyy-MM-dd'))"
+Write-Information "  Date range      : $($StartDate.ToString('yyyy-MM-dd')) to $($EndDate.ToString('yyyy-MM-dd'))"
 Write-Information "  Impacted users  : $($summaryRows.Count)"
 Write-Information ""
 Write-Information "  Users by app (a user may appear in multiple):"
