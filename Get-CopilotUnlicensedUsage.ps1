@@ -102,7 +102,7 @@ Write-Information "`n[Phase 1] Checking prerequisites..."
 
 # ── Required modules ─────────────────────────────────────────────────────────
 $requiredModules = @(
-    @{ Name = 'ExchangeOnlineManagement';                    MinVersion = '3.0.0' },
+    @{ Name = 'ExchangeOnlineManagement';                    MinVersion = '3.2.0' },
     @{ Name = 'Microsoft.Graph.Authentication';              MinVersion = '2.0.0' },
     @{ Name = 'Microsoft.Graph.Users';                       MinVersion = '2.0.0' },
     @{ Name = 'Microsoft.Graph.Identity.DirectoryManagement'; MinVersion = '2.0.0' }
@@ -155,8 +155,9 @@ Write-Information "  Unified Audit Log ingestion is enabled - OK"
 Write-Information "`nConnecting to Security & Compliance PowerShell (interactive - sign-in 2 of 3)..."
 # GCC Moderate uses the default endpoint.
 # For GCC High, uncomment the next line and comment out the one after it:
-#   Connect-IPPSSession -ConnectionUri https://ps.compliance.protection.office365.us/powershell-liveid/
-Connect-IPPSSession -ShowBanner:$false
+#   Connect-IPPSSession -ConnectionUri https://ps.compliance.protection.office365.us/powershell-liveid/ -WarningAction SilentlyContinue
+# Note: -ShowBanner is not supported on Connect-IPPSSession in all EXO module versions.
+Connect-IPPSSession -WarningAction SilentlyContinue
 
 # ── Connection 3 of 3: Microsoft Graph ───────────────────────────────────────
 # Needed for Get-MgSubscribedSku (Copilot SKU discovery) and Get-MgUser
